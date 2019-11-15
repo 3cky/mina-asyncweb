@@ -19,6 +19,14 @@
  */
 package org.apache.asyncweb.common;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
+
+import org.apache.asyncweb.common.codec.HttpCodecUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 
 
@@ -75,6 +83,31 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements
         this.statusReasonPhrase = statusReasonPhrase;
     }
 
+    /**
+     * Thread-local DateFormat for old-style cookies
+     */
+    private static final ThreadLocal<DateFormat> EXPIRY_FORMAT_LOCAL = new ThreadLocal<DateFormat>() {
+        @Override
+        protected DateFormat initialValue() {
+            SimpleDateFormat format = new SimpleDateFormat(
+                    "EEE, dd-MMM-yyyy HH:mm:ss z", Locale.US);
+            format.setTimeZone(TimeZone.getTimeZone(
+                    HttpCodecUtils.DEFAULT_TIME_ZONE_NAME));
+            return format;
+        }
+    };
+
+    /**
+     * A date long long ago, formatted in the old style cookie expire format
+     */
+    private static final String EXPIRED_DATE = getFormattedExpiry(0);
+
+    private static String getFormattedExpiry(long time) {
+        DateFormat format = EXPIRY_FORMAT_LOCAL.get();
+        return format.format(new Date(time));
+    }
+
+
     public void normalize(HttpRequest request) {
         updateConnectionHeader(request);
 
@@ -93,6 +126,58 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements
             setHeader(HttpHeaderConstants.KEY_CONTENT_LENGTH, String
                     .valueOf(contentLength));
         }
+
+        // Encode Cookies
+        Set<Cookie> cookies = getCookies();
+        if (!cookies.isEmpty()) {
+            // Clear previous values.
+            removeHeader(HttpHeaderConstants.KEY_SET_COOKIE);
+
+            // And encode.
+            for (Cookie c: cookies) {
+                StringBuilder buf = new StringBuilder();
+                buf.append(c.getName());
+                buf.append('=');
+                buf.append(c.getValue());
+                if (c.getVersion() > 0) {
+                    buf.append("; version=");
+                    buf.append(c.getVersion());
+                }
+                if (c.getPath() != null) {
+                    buf.append("; path=");
+                    buf.append(c.getPath());
+                }
+                if (c.getDomain() != null) {
+                    buf.append("; domain=");
+                    buf.append(c.getDomain());
+                }
+
+                long expiry = c.getMaxAge();
+                int version = c.getVersion();
+                if (expiry >= 0) {
+                    if (version == 0) {
+                        String expires = expiry == 0 ? EXPIRED_DATE
+                                : getFormattedExpiry(System.currentTimeMillis()
+                                        + 1000 * expiry);
+                        buf.append("; Expires=");
+                        buf.append(expires);
+                    } else {
+                        buf.append("; max-age=");
+                        buf.append(c.getMaxAge());
+                    }
+                }
+
+                if (c.isSecure()) {
+                    buf.append("; secure");
+                }
+                if (c.isHttpOnly()) {
+                   buf.append("; HTTPOnly");
+                }
+
+                addHeader(HttpHeaderConstants.KEY_SET_COOKIE, buf.toString());
+            }
+        }
+
     }
 
     /**
