@@ -1,0 +1,11 @@
+.classpath
+.project
+.settings
+*.ipr
+*.iws
+*.iml
+target/
+bin/
+*.log
+*.patch
+META-INF/
