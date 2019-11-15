@@ -35,6 +35,8 @@ import org.apache.mina.filter.codec.ProtocolEncoder;
  */
 public class HttpCodecFactory implements ProtocolCodecFactory
 {
+    private final static String KEY_DECODER = HttpCodecFactory.class.getName();
+    
     /**
      * Gets an HttpResponseEncoder if the IoService is an acceptor for a
      * server, or an HttpRequestEncoder if the IoService is a connector for a
@@ -64,13 +66,21 @@ public class HttpCodecFactory implements ProtocolCodecFactory
      */
     public ProtocolDecoder getDecoder( IoSession session ) throws Exception
     {
-        if ( session.getService() instanceof IoAcceptor )
+        ProtocolDecoder decoder = (ProtocolDecoder) session.getAttribute( KEY_DECODER );
+
+        if ( decoder == null )
         {
-            return new HttpRequestDecoder();
+            if ( session.getService() instanceof IoAcceptor )
+            {
+                decoder = new HttpRequestDecoder();
+            }
+            else
+            {
+                decoder = new HttpResponseDecoder();
+            }
+            session.setAttribute( KEY_DECODER, decoder );
         }
-        else
-        {
-            return new HttpResponseDecoder();
-        }
+        
+        return decoder;
     }
 }
