@@ -30,12 +30,12 @@ import org.apache.mina.core.future.IoFutureListener;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.future.WriteFuture;
 import org.apache.mina.core.write.WriteRequest;
+import org.apache.mina.filter.FilterEvent;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.filter.codec.ProtocolDecoderException;
 import org.apache.asyncweb.common.HttpRequest;
 import org.apache.asyncweb.common.HttpResponseStatus;
 import org.apache.asyncweb.common.HttpVersion;
-import org.apache.asyncweb.common.MutableHttpResponse;
 import org.apache.mina.handler.multiton.SingleSessionIoHandler;
 import org.apache.asyncweb.common.*;
 import org.apache.asyncweb.common.codec.HttpCodecFactory;
@@ -115,7 +115,10 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
 
     public void sessionClosed()
     {
-        LOG.debug( "Session closed: {}", session.getRemoteAddress() );
+        if ( LOG.isDebugEnabled() )
+        {
+            LOG.debug( "Session closed: {}", session.getRemoteAddress() );
+        }
 
         if ( currentContext != null )
         {
@@ -123,6 +126,23 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
         }
     }
 
+
+    public void inputClosed( IoSession inputSession )
+    {
+        if ( LOG.isDebugEnabled() )
+        {
+            LOG.debug( "Input closed: {}", inputSession.getRemoteAddress() );
+        }
+    }
+
+
+    public void event( FilterEvent event ) throws Exception
+    {
+        if ( LOG.isDebugEnabled() )
+        {
+            LOG.debug( "FilterEvent: {}", event );
+        }
+    }
 
     /**
      * Invoked when this connection idles out.
@@ -139,7 +159,7 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
             //        handleReadFailure(currentContext, HttpResponseStatus.REQUEST_TIMEOUT, "Timeout while reading request");
             //      } else {
             LOG.debug( "Session idle detected on context {} with idleType {}", currentContext, idleType );
-        	
+
             if ( currentContext != null )
             {
                 if ( IdleStatus.BOTH_IDLE == idleType || IdleStatus.READER_IDLE == idleType )
@@ -189,7 +209,7 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
         }
         else if ( cause instanceof IOException )
         {
-            LOG.warn( "IOException on HTTP connection", cause );
+            LOG.debug( "IOException on HTTP connection", cause );
             session.close();
         }
         else
@@ -203,11 +223,17 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
         if ( response != null )
         {
             HttpServiceContext context = this.currentContext;
-            if ( context == null )
+            try
             {
-                context = createContext( new DefaultHttpRequest() );
+                if ( context == null )
+                {
+                    context = createContext( new DefaultHttpRequest() );
+                }
+                context.commitResponse( response );
+            } catch ( IOException e )
+            {
+                LOG.debug("IOException on exception HTTP response", e);
             }
-            context.commitResponse( response );
         }
     }
 
@@ -269,8 +295,12 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
     }
 
 
-    protected DefaultHttpServiceContext createContext( HttpRequest request )
+    protected DefaultHttpServiceContext createContext( HttpRequest request ) throws IOException
     {
+        if ( session.isClosing() )
+        {
+            throw new IOException( "Can't create context for closing session" );
+        }
         return new DefaultHttpServiceContext( request );
     }
 
@@ -429,7 +459,7 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
         {
             super.fireClientIdle( idleTime, idleCount );
         }
-        
+
 
         public void fireClientDisconnected()
         {

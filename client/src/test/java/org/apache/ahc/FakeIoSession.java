@@ -383,4 +383,16 @@ public class FakeIoSession implements IoSession {
     public boolean isReadSuspended() {
         return false;
     }
+
+    public CloseFuture closeNow() {
+        return null;
+    }
+
+    public boolean isActive() {
+        return false;
+    }
+
+    public boolean isSecured() {
+        return false;
+    }
 }
