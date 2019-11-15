@@ -135,10 +135,14 @@ public class LinkedPermitIssuerTest extends TestCase {
      * a following entry
      */
     public void testRenewHeadFirst() {
+        registerMockListener();
         TimedPermit permit1 = issuer.issuePermit("permit1");
-        TimedPermit permit2 = issuer.issuePermit("permit2");
+        issuer.issuePermit("permit2");
+        listener.validate(LIFETIME / 2);
         permit1.renew();
-        permit2.renew();
+        listener.addExpectedExpiration("permit2");
+        listener.addExpectedExpiration("permit1");
+        listener.validate(LIFETIME * 2);
     }
 
     private void registerMockListener() {

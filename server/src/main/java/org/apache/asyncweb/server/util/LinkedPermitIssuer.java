@@ -367,6 +367,7 @@ public class LinkedPermitIssuer implements TimedPermitIssuer
                 } catch (InterruptedException e) {
                     throw new RuntimeException("Unexpected interrupt");
                 }
+                entry = head;
                 timeToExpiry = entry.timeToExpiry();
             }
 
