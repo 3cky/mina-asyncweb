@@ -19,6 +19,8 @@
  */
 package org.apache.asyncweb.server;
 
+import java.util.Iterator;
+
 /**
  * Provides a mechanism to store data across multiple requests from the same client.
  *
@@ -60,6 +62,11 @@ public interface HttpSession {
      *         the specified key
      */
     public Object removeValue(String key);
+
+    /**
+     * @return an {@link Iterator} of String objects specifying the names of all the objects bound to this session
+     */
+    public Iterator<String> getAttributeNames();
 
     /**
      * Determines whether the client is aware of this session and has opted-in

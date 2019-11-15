@@ -21,6 +21,7 @@ package org.apache.asyncweb.server.session;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.asyncweb.server.HttpSession;
@@ -67,6 +68,10 @@ class BasicSession implements HttpSession
 
     public Object removeValue(String key) {
         return values.remove(key);
+    }
+
+    public Iterator<String> getAttributeNames() {
+        return values.keySet().iterator();
     }
 
     public boolean isAttached() {
