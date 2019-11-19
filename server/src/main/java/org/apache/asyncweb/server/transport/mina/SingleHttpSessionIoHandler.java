@@ -347,7 +347,11 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
                     nextFilter.messageReceived(session, message);
                 }
             };
-            filter.handleRequest( nextFilterAdapter, ( HttpServiceContext ) message );
+            try {
+                filter.handleRequest( nextFilterAdapter, ( HttpServiceContext ) message );
+            } catch ( Error e ) {
+                throw new RuntimeException( e );
+            }
         }
 
         @Override
@@ -363,7 +367,11 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
             };
 
             HttpServiceContext context = ( HttpServiceContext ) writeRequest.getMessage();
-            filter.handleResponse( nextFilterAdapter, context );
+            try {
+                filter.handleResponse( nextFilterAdapter, context );
+            } catch ( Error e ) {
+                throw new RuntimeException( e );
+            }
         }
     }
 
