@@ -133,6 +133,8 @@ public class SingleHttpSessionIoHandler implements SingleSessionIoHandler
         {
             LOG.debug( "Input closed: {}", inputSession.getRemoteAddress() );
         }
+
+        session.closeNow();
     }
 
 
